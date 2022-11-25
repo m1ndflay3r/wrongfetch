@@ -1,0 +1,251 @@
+#!/usr/bin/env zsh
+
+ctext() {
+  # Set colour from $1
+  if [ "$1" = black ]; then
+    tput setaf 0
+  fi
+  if [ "$1" = red ]; then
+    tput setaf 1
+  fi
+  if [ "$1" = green ]; then
+    tput setaf 2
+  fi
+  if [ "$1" = yellow ]; then
+    tput setaf 3
+  fi
+  if [ "$1" = blue ]; then
+    tput setaf 4
+  fi
+  if [ "$1" = magenta ]; then
+    tput setaf 5
+  fi
+  if [ "$1" = cyan ]; then
+    tput setaf 6
+  fi
+  if [ "$1" = white ]; then
+    tput setaf 7
+  fi
+  # Set background colour from $1
+  if [ "$1" = dblack ]; then
+    tput setab 0
+  fi
+  if [ "$1" = dred ]; then
+    tput setab 1
+  fi
+  if [ "$1" = dgreen ]; then
+    tput setab 2
+  fi
+  if [ "$1" = dyellow ]; then
+    tput setab 3
+  fi
+  if [ "$1" = dblue ]; then
+    tput setab 4
+  fi
+  if [ "$1" = dmagenta ]; then
+    tput setab 5
+  fi
+  if [ "$1" = dcyan ]; then
+    tput setab 6
+  fi
+  if [ "$1" = dwhite ]; then
+    tput setab 7
+  fi
+  if [ "$1" = reset ]; then
+    tput sgr 0
+  fi
+  # text method from $2
+  if [ "$2" = std ]; then
+    echo "${@:3}"
+    tput sgr 0
+  fi
+  if [ "$2" = nnl ]; then
+    echo -n "${@:3}"
+    tput sgr 0
+  fi
+  if [ "$2" = std,bold ]; then
+    tput bold
+    echo "${@:3}"
+    tput sgr 0
+  fi
+  if [ "$2" = nnl,bold ]; then
+    tput bold
+    echo -n "${@:3}"
+    tput sgr 0
+  fi
+  if [ "$2" = std,dim ]; then
+    tput dim
+    echo "${@:3}"
+    tput sgr 0
+  fi
+  if [ "$2" = nnl,dim ]; then
+    tput dim
+    echo -n "${@:3}"
+    tput sgr 0
+  fi
+  if [ "$2" = std,nres ]; then
+    echo "${@:3}"
+  fi
+  if [ "$2" = nnl,nres ]; then
+    echo -n "${@:3}"
+  fi
+  if [ "$2" = std,bold,nres ]; then
+    tput bold
+    echo "${@:3}"
+  fi
+  if [ "$2" = nnl,bold,nres ]; then
+    tput bold
+    echo -n "${@:3}"
+  fi
+  if [ "$2" = std,dim,nres ]; then
+    tput dim
+    echo "${@:3}"
+  fi
+  if [ "$2" = nnl,dim,nres ]; then
+    tput dim
+    echo -n "${@:3}"
+  fi
+  # special characters
+  if [ "$2" = chkmrk ]; then
+    tput bold
+    echo -e "\xE2\x9C\x94"
+    tput sgr 0
+  fi
+  if [ "$2" = xmrk ]; then
+    tput bold
+    echo "X"
+    tput sgr 0
+  fi
+  if [ "$2" = grin ]; then
+    tput bold
+    echo "😀"
+    tput sgr 0
+  fi
+  if [ "$2" = smile ]; then
+    tput bold
+    echo "☺"
+    tput sgr 0
+  fi
+  if [ "$2" = glss ]; then
+    tput bold
+    echo "😎"
+    tput sgr 0
+  fi
+  if [ "$2" = frown ]; then
+    tput bold
+    echo "☹"
+    tput sgr 0
+  fi
+  if [ "$2" = horrif ]; then
+    tput bold
+    echo "😱"
+    tput sgr 0
+  fi
+  if [ "$2" = dead ]; then
+    tput bold
+    echo "☠"
+    tput sgr 0
+  fi
+}
+
+isyes() {
+  if [ ! -z "$1" ]; then
+    echo -n "$1  "
+    ANSWER=$(read -n dANSWER && echo $dANSWER)
+  else
+    ANSWER=$(read -n dANSWER && echo $dANSWER)
+  fi
+  if [ -z "$ANSWER" ]; then
+    if [ -z "$DEFINVERT" ]; then
+      ANSWER="y"
+    else
+      ANSWER="n"
+      unset DEFINVERT
+    fi
+  fi
+  if [ $ANSWER = y ] || [ $ANSWER = Y ] || [ $ANSWER = yes ] || [ $ANSWER = Yes ] || [ $ANSWER = YES ]; then
+    yes=0 && return 0
+  else
+    yes=1 && return 1
+  fi
+}
+
+isvalidoperation() {
+  for i in ${@:2}; do
+    if [ $1 = $i ]; then
+      true
+      break
+    else
+      false
+    fi
+  done
+}
+
+extractdeps() {
+  GETDEPS() {
+    OP="$@[1]"
+    if [ $OP = makedeps ]; then
+      FIRSTMATCH='makedepends=('
+    elif [ $OP = deps ]; then
+      FIRSTMATCH='depends=('
+    elif [ $OP = optdeps ]; then
+      FIRSTMATCH='optdepends=('
+    else
+      echo "Invalid option"
+      exit 1
+    fi
+    SECONDMATCH=')'
+    declare -a zPKGBUILD
+    zPKGBUILD=($(cat ./PKGBUILD))
+    EXTDAT=0
+    FIRSTLINE=0
+    OPTDEPISFUCKY=0
+    IFS=$'\n'
+    for i in ${zPKGBUILD[@]}; do
+      if [ $OP = makedeps ]; then
+        TESTONE="${i:0:13}"
+      elif [ $OP = optdeps ]; then
+        TESTONE="${i:0:12}"
+      elif [ $OP = deps ]; then
+        TESTONE="${i:0:9}"
+      fi
+      if [ -z "$TESTONE" ]; then
+        TESTONE=NULL
+      fi
+      if [[ $TESTONE = $FIRSTMATCH ]]; then
+        EXTDAT=1
+        FIRSTLINE=1
+      fi
+      if [ "$EXTDAT" = 1 ]; then
+        TESTTWO="${i:0:1}"
+        if [[ "$TESTTWO" != "$SECONDMATCH" ]]; then
+          if [ $FIRSTLINE = 1 ]; then
+            echo "$FIRSTMATCH"
+            FIRSTLINE=0
+            SECLINE=1
+          elif [ $FIRSTLINE = 0 ]; then
+            echo "  $i"
+          fi
+        else
+          echo "$SECONDMATCH"
+          EXTDAT=0
+        fi
+      fi
+    done
+    unset IFS
+    tput sgr 0
+  }
+  echo '#!/usr/bin/env zsh' > ./depends.zsh
+  echo "" >> ./depends.zsh
+  GETDEPS deps &> ./zdepends.zsh
+  head -n -1 ./zdepends.zsh >> ./depends.zsh
+  echo "" >> ./depends.zsh
+  GETDEPS makedeps &> ./zmakedepends.zsh
+  head -n -1 ./zmakedepends.zsh >> ./depends.zsh
+  echo "" >> ./depends.zsh
+  GETDEPS optdeps &> ./zoptdepends.zsh
+  head -n -1 ./zoptdepends.zsh >> ./depends.zsh
+  rm -rf ./zoptdepends.zsh
+  rm -rf ./zmakedepends.zsh
+  rm -rf ./zdepends.zsh
+}
